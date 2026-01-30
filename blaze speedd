@@ -1,0 +1,203 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+local LocalPlayer = Players.LocalPlayer
+-- Safer way to get PlayerGui to prevent infinite loading
+local PlayerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui") or LocalPlayer:WaitForChild("PlayerGui", 10)
+
+-- Clean up existing GUI if it's already there (prevents stacking)
+if PlayerGui:FindFirstChild("Blaze_Speed_Boost") then
+    PlayerGui:FindFirstChild("Blaze_Speed_Boost"):Destroy()
+end
+
+-- Accessory Remover Logic
+local function RemoveAccessories(character)
+    if not character then return end
+    for _, accessory in ipairs(character:GetDescendants()) do
+        if accessory:IsA("Accessory") then accessory:Destroy() end
+    end
+end
+if LocalPlayer.Character then RemoveAccessories(LocalPlayer.Character) end
+LocalPlayer.CharacterAdded:Connect(RemoveAccessories)
+
+-- Main GUI Setup
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "Blaze_Speed_Boost"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = true -- Ensures it doesn't shift down
+ScreenGui.Parent = PlayerGui
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 240, 0, 190) 
+MainFrame.Position = UDim2.new(0.5, -120, 0.5, -95)
+MainFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255) 
+MainFrame.Active = true
+MainFrame.Draggable = true -- Legacy drag support
+MainFrame.Parent = ScreenGui
+
+-- Ensure the UI is visible
+MainFrame.Visible = true
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 20)
+MainCorner.Parent = MainFrame
+
+local MainGradient = Instance.new("UIGradient")
+MainGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 45, 0)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 140, 0))
+})
+MainGradient.Rotation = 45
+MainGradient.Parent = MainFrame
+
+-- Falling Fire Effect
+local EmojiContainer = Instance.new("Frame", MainFrame)
+EmojiContainer.Size = UDim2.new(1, 0, 1, 0)
+EmojiContainer.BackgroundTransparency = 1
+EmojiContainer.ClipsDescendants = true
+
+local function CreateFallingFire()
+    local emoji = Instance.new("TextLabel", EmojiContainer)
+    emoji.BackgroundTransparency = 1
+    emoji.Text = "🔥"
+    emoji.TextSize = math.random(12, 20)
+    emoji.Position = UDim2.new(math.random(), 0, -0.2, 0)
+    
+    local fallTime = math.random(2, 4)
+    local targetPos = UDim2.new(emoji.Position.X.Scale + (math.random(-1, 1)/10), 0, 1.2, 0)
+    
+    local t = TweenService:Create(emoji, TweenInfo.new(fallTime, Enum.EasingStyle.Linear), {
+        Position = targetPos, 
+        Rotation = math.random(-180, 180)
+    })
+    
+    t:Play()
+    t.Completed:Connect(function() emoji:Destroy() end)
+end
+
+task.spawn(function()
+    while task.wait(0.4) do CreateFallingFire() end
+end)
+
+-- Title
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, -20, 0, 35)
+TitleLabel.Position = UDim2.new(0, 15, 0, 8)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "BLAZE SPEED"
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.Font = Enum.Font.Arcade
+TitleLabel.TextSize = 22
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Parent = MainFrame
+
+-- Labels & Inputs
+local function CreateRetroLabel(text, pos)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(0, 80, 0, 20)
+    lbl.Position = pos
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text
+    lbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+    lbl.Font = Enum.Font.Arcade
+    lbl.TextSize = 16
+    lbl.Parent = MainFrame
+    return lbl
+end
+
+CreateRetroLabel("SPEED", UDim2.new(0, 20, 0, 60))
+CreateRetroLabel("JUMP", UDim2.new(0, 20, 0, 95))
+
+local function CreateRetroInput(text, pos)
+    local box = Instance.new("TextBox")
+    box.Size = UDim2.new(0, 80, 0, 25)
+    box.Position = pos
+    box.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    box.BackgroundTransparency = 0.5
+    box.Text = text
+    box.TextColor3 = Color3.fromRGB(255, 255, 255)
+    box.Font = Enum.Font.Arcade
+    box.TextSize = 16
+    box.Parent = MainFrame
+    Instance.new("UICorner", box).CornerRadius = UDim.new(0, 8)
+    return box
+end
+
+local SpeedBox = CreateRetroInput("25", UDim2.new(0, 130, 0, 58))
+local JumpBox = CreateRetroInput("50", UDim2.new(0, 130, 0, 93))
+
+-- Toggle
+local BoosterEnabled = false
+local ToggleButton = Instance.new("TextButton", MainFrame)
+ToggleButton.Size = UDim2.new(0, 45, 0, 22)
+ToggleButton.Position = UDim2.new(0, 175, 0, 15)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+ToggleButton.BackgroundTransparency = 0.4
+ToggleButton.Text = ""
+Instance.new("UICorner", ToggleButton).CornerRadius = UDim.new(1, 0)
+
+local Knob = Instance.new("Frame", ToggleButton)
+Knob.Size = UDim2.new(0, 18, 0, 18)
+Knob.Position = UDim2.new(0, 2, 0.5, 0)
+Knob.AnchorPoint = Vector2.new(0, 0.5)
+Knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Instance.new("UICorner", Knob).CornerRadius = UDim.new(1, 0)
+
+ToggleButton.MouseButton1Click:Connect(function()
+    BoosterEnabled = not BoosterEnabled
+    local targetPos = BoosterEnabled and UDim2.new(1, -20, 0.5, 0) or UDim2.new(0, 2, 0.5, 0)
+    local targetColor = BoosterEnabled and Color3.fromRGB(255, 180, 0) or Color3.fromRGB(255, 255, 255)
+    TweenService:Create(Knob, TweenInfo.new(0.2), {Position = targetPos, BackgroundColor3 = targetColor}):Play()
+end)
+
+-- Discord Button (The Fix)
+local DiscordBtn = Instance.new("TextButton")
+DiscordBtn.Size = UDim2.new(0.85, 0, 0, 30)
+DiscordBtn.Position = UDim2.new(0.075, 0, 1, -45)
+DiscordBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+DiscordBtn.BackgroundTransparency = 0.6
+DiscordBtn.Text = "COPY DISCORD LINK"
+DiscordBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+DiscordBtn.Font = Enum.Font.Arcade
+DiscordBtn.TextSize = 14
+DiscordBtn.Parent = MainFrame
+Instance.new("UICorner", DiscordBtn).CornerRadius = UDim.new(0, 8)
+
+DiscordBtn.MouseButton1Click:Connect(function()
+    local link = "https://discord.gg/qqCjHF5m"
+    -- Using pcall so the script doesn't crash if your executor lacks setclipboard
+    local success, err = pcall(function()
+        setclipboard(link)
+    end)
+    
+    if success then
+        DiscordBtn.Text = "COPIED TO CLIPBOARD!"
+    else
+        DiscordBtn.Text = "ERROR - COPY MANUALLY"
+        print("Discord Link: ", link)
+    end
+    task.wait(2)
+    DiscordBtn.Text = "COPY DISCORD LINK"
+end)
+
+-- Speed Loop
+RunService.Heartbeat:Connect(function()
+    if not BoosterEnabled then return end
+    local char = LocalPlayer.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    
+    if hum and root then
+        local SpeedValue = tonumber(SpeedBox.Text) or 25
+        local JumpValue = tonumber(JumpBox.Text) or 50
+        if hum.MoveDirection.Magnitude > 0 then
+            root.Velocity = Vector3.new(hum.MoveDirection.X * SpeedValue, root.Velocity.Y, hum.MoveDirection.Z * SpeedValue)
+        end
+        hum.UseJumpPower = true
+        hum.JumpPower = JumpValue
+    end
+end)
+
+print("Blaze Speed Boost Loaded Successfully!")
